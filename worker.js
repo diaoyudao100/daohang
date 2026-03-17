@@ -154,6 +154,31 @@ export default {
       return json({ ok: true, hasUsers: list.length > 0, count: list.length });
     }
 
+    // GET /api/fetch?url=xxx — 代理抓取页面 title+description（需登录）
+    if (request.method === 'GET' && path === '/api/fetch') {
+      const username = await authFromRequest(request, env.NAV_KV);
+      if (!username) return err('未登录', 401);
+      const targetUrl = url.searchParams.get('url');
+      if (!targetUrl) return err('缺少 url 参数');
+      try {
+        const res = await fetch(targetUrl, {
+          headers: { 'User-Agent': 'Mozilla/5.0 (compatible; NavBot/1.0)' },
+          signal: AbortSignal.timeout(8000),
+        });
+        const html = await res.text();
+        const titleMatch = html.match(/<title[^>]*>([^<]*)<\/title>/i);
+        const descMatch = html.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']*)["']/i)
+          || html.match(/<meta[^>]+content=["']([^"']*)["'][^>]+name=["']description["']/i);
+        return json({
+          ok: true,
+          title: titleMatch ? titleMatch[1].trim() : '',
+          description: descMatch ? descMatch[1].trim() : '',
+        });
+      } catch (e) {
+        return json({ ok: true, title: '', description: '' });
+      }
+    }
+
     return err('Not Found', 404);
   },
 };

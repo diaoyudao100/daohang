@@ -209,7 +209,7 @@ select.form-input option{background:var(--bg3);color:var(--t)}
     <div class="modal-title" id="card-modal-title">添加书签</div>
     <div class="form-group"><label class="form-label">URL</label><input class="form-input" id="cm-url" placeholder="https://..."><div class="ai-hint" id="cm-hint"></div></div>
     <div class="form-row"><div class="form-group"><label class="form-label">名称</label><input class="form-input" id="cm-name" placeholder="网站名称"></div><div class="form-group" style="flex:0 0 90px"><label class="form-label">图标</label><input class="form-input" id="cm-icon" placeholder="🌐"></div></div>
-    <div class="form-group"><label class="form-label">描述</label><input class="form-input" id="cm-desc" placeholder="简短描述"></div>
+    <div class="form-group"><label class="form-label">描述</label><div style="display:flex;gap:8px"><input class="form-input" id="cm-desc" placeholder="简短描述"><button class="btn btn-ghost" id="cm-ai-fill" style="display:none;white-space:nowrap">✨ AI填写</button></div></div>
     <div class="form-group"><label class="form-label">分类</label><select class="form-input" id="cm-cat"></select></div>
     <div class="modal-footer"><button class="btn btn-danger" id="cm-del" style="margin-right:auto;display:none">删除</button><button class="btn btn-ghost" id="cm-cancel">取消</button><button class="btn btn-primary" id="cm-save">保存</button></div>
   </div>
@@ -263,6 +263,7 @@ select.form-input option{background:var(--bg3);color:var(--t)}
     <div class="settings-tabs">
       <button class="stab on" data-tab="appearance">🎨 外观</button>
       <button class="stab" data-tab="cats">📁 分类管理</button>
+      <button class="stab" data-tab="ai">🤖 AI助理</button>
     </div>
     <div class="stab-panel on" id="stab-appearance">
       <div class="form-group"><label class="form-label">主题色</label><div class="accent-swatches" id="accent-swatches"></div></div>
@@ -272,6 +273,25 @@ select.form-input option{background:var(--bg3);color:var(--t)}
     <div class="stab-panel" id="stab-cats">
       <div id="cat-manager-list"></div>
       <div style="margin-top:12px"><button class="btn btn-ghost" id="cat-mgr-add">＋ 新增分类</button></div>
+    </div>
+    <div class="stab-panel" id="stab-ai">
+      <div class="form-group">
+        <label class="form-label">预设服务</label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn btn-ghost ai-preset" data-url="https://api.openai.com/v1" data-fmt="openai">OpenAI</button>
+          <button class="btn btn-ghost ai-preset" data-url="https://api.anthropic.com" data-fmt="claude">Claude</button>
+          <button class="btn btn-ghost ai-preset" data-url="https://generativelanguage.googleapis.com/v1beta/openai" data-fmt="openai">Gemini</button>
+          <button class="btn btn-ghost ai-preset" data-url="" data-fmt="openai">自定义</button>
+        </div>
+      </div>
+      <div class="form-group"><label class="form-label">Base URL</label><input class="form-input" id="ai-base-url" placeholder="https://api.openai.com/v1"></div>
+      <div class="form-group"><label class="form-label">API Key</label><div style="display:flex;gap:8px"><input class="form-input" id="ai-api-key" type="password" placeholder="sk-..."><button class="btn btn-ghost" id="ai-fetch-models" style="white-space:nowrap">拉取模型</button></div></div>
+      <div class="form-group"><label class="form-label">模型</label><select class="form-input" id="ai-model"><option value="">-- 请先拉取模型 --</option></select></div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn btn-ghost" id="ai-test">🔌 测试连接</button>
+        <button class="btn btn-ghost" id="ai-batch-fill">✨ 一键补全所有缺失描述</button>
+      </div>
+      <div id="ai-status" style="margin-top:10px;font-size:13px;color:var(--t2)"></div>
     </div>
     <div class="modal-footer"><button class="btn btn-ghost" id="settings-close">关闭</button></div>
   </div>
@@ -457,6 +477,41 @@ var savedTitle=localStorage.getItem('nav_title');if(savedTitle)document.getEleme
 var savedAccent=localStorage.getItem('nav_accent');if(savedAccent)document.documentElement.style.setProperty('--a',savedAccent);
 applyBgUrl(localStorage.getItem('nav_bg_url')||'');
 applyCardStyle(localStorage.getItem('nav_style')||'detailed');
+// AI 助理相关函数
+function getAiConfig(){return{baseUrl:localStorage.getItem('ai_base_url')||'',apiKey:localStorage.getItem('ai_api_key')||'',model:localStorage.getItem('ai_model')||'',fmt:localStorage.getItem('ai_fmt')||'openai'};}
+function saveAiConfig(){localStorage.setItem('ai_base_url',document.getElementById('ai-base-url').value.trim());localStorage.setItem('ai_api_key',document.getElementById('ai-api-key').value.trim());localStorage.setItem('ai_model',document.getElementById('ai-model').value);localStorage.setItem('ai_fmt',document.getElementById('ai-base-url').dataset.fmt||'openai');}
+async function callAi(prompt){var cfg=getAiConfig();if(!cfg.baseUrl||!cfg.apiKey||!cfg.model)throw new Error('请先在设置中配置 AI 助理');var isClaudefmt=cfg.fmt==='claude'||(cfg.baseUrl.includes('anthropic.com')&&!cfg.baseUrl.includes('openai'));var headers={'Content-Type':'application/json'};var body,resJson;if(isClaudefmt){headers['x-api-key']=cfg.apiKey;headers['anthropic-version']='2023-06-01';body={model:cfg.model,max_tokens:512,messages:[{role:'user',content:prompt}]};var r=await fetch(cfg.baseUrl.replace(/\/$/,'')+'/v1/messages',{method:'POST',headers:headers,body:JSON.stringify(body)});resJson=await r.json();if(!r.ok)throw new Error(resJson.error?.message||r.statusText);return resJson.content?.[0]?.text||'';}else{headers['Authorization']='Bearer '+cfg.apiKey;body={model:cfg.model,max_tokens:512,messages:[{role:'user',content:prompt}]};var r=await fetch(cfg.baseUrl.replace(/\/$/,'')+'/chat/completions',{method:'POST',headers:headers,body:JSON.stringify(body)});resJson=await r.json();if(!r.ok)throw new Error(resJson.error?.message||r.statusText);return resJson.choices?.[0]?.message?.content||'';}}
+async function fetchPageInfo(url){if(!token)return{title:'',description:''};try{var r=await fetch('/api/fetch?url='+encodeURIComponent(url),{headers:{'Authorization':'Bearer '+token}});var d=await r.json();return d.ok?{title:d.title||'',description:d.description||''}:{title:'',description:''}}catch(e){return{title:'',description:''}}}
+async function aiFillCard(){var url=document.getElementById('cm-url').value.trim(),name=document.getElementById('cm-name').value.trim();if(!url||!name){toast('请先填写URL和名称');return;}var btn=document.getElementById('cm-ai-fill');btn.textContent='⏳ 分析中...';btn.disabled=true;try{var page=await fetchPageInfo(url);var catNames=cats.map(function(c){return c.icon+c.name;}).join('、');var prompt='请根据以下信息为这个书签生成简短描述（不超过20字）和最合适的分类。\
+网站URL：'+url+'\
+网站名称：'+name+(page.title?'\
+页面标题：'+page.title:'')+(page.description?'\
+页面描述：'+page.description:'')+'\
+\
+现有分类：'+catNames+'\
+\
+请用JSON格式返回，格式：{"desc":"描述内容","cat":"最合适的现有分类名，如无合适的则填写建议的新分类名","isNewCat":false}\
+只返回JSON，不要其他内容。';var result=await callAi(prompt);var json=JSON.parse(result.replace(/```json|```/g,'').trim());if(json.desc)document.getElementById('cm-desc').value=json.desc;if(json.cat){var matched=cats.find(function(c){return c.name===json.cat||c.name.includes(json.cat)||json.cat.includes(c.name);});if(matched){document.getElementById('cm-cat').value=matched.id;}else if(json.isNewCat||!matched){toast('AI建议新分类「'+json.cat+'」，已保留现有分类');}}toast('AI填写完成 ✨');}catch(e){toast('AI填写失败：'+e.message);}finally{btn.textContent='✨ AI填写';btn.disabled=false;}}
+async function aiBatchFill(){var empty=cards.filter(function(c){return!c.desc;});if(!empty.length){toast('所有书签已有描述');return;}var statusEl=document.getElementById('ai-status');statusEl.textContent='开始批量补全，共 '+empty.length+' 个...';var ok=0,fail=0;for(var i=0;i<empty.length;i++){var card=empty[i];statusEl.textContent='处理中 '+(i+1)+'/'+empty.length+'：'+card.name;try{var page=await fetchPageInfo(card.url);var prompt='请为这个书签生成简短描述（不超过20字）。\
+URL：'+card.url+'\
+名称：'+card.name+(page.title?'\
+标题：'+page.title:'')+(page.description?'\
+描述：'+page.description:'')+'\
+\
+只返回描述文字，不要其他内容。';var result=await callAi(prompt);card.desc=result.trim().slice(0,50);ok++;}catch(e){fail++;}}saveLocal();schedulSync();renderCards();statusEl.textContent='✅ 完成！成功 '+ok+' 个'+(fail?'，失败 '+fail+' 个':'');}
+// AI 设置面板事件
+document.querySelectorAll('.ai-preset').forEach(function(btn){btn.addEventListener('click',function(){var urlInput=document.getElementById('ai-base-url');urlInput.value=this.dataset.url;urlInput.dataset.fmt=this.dataset.fmt;});});
+document.getElementById('ai-fetch-models').addEventListener('click',async function(){var baseUrl=document.getElementById('ai-base-url').value.trim(),apiKey=document.getElementById('ai-api-key').value.trim();if(!baseUrl||!apiKey){toast('请先填写 Base URL 和 API Key');return;}this.textContent='加载中...';this.disabled=true;try{var fmt=document.getElementById('ai-base-url').dataset.fmt||'openai';var headers={'Authorization':'Bearer '+apiKey};if(fmt==='claude'){headers={'x-api-key':apiKey,'anthropic-version':'2023-06-01'};}var r=await fetch(baseUrl.replace(/\/$/,'')+(fmt==='claude'?'/v1/models':'/models'),{headers:headers});var d=await r.json();var models=d.data||d.models||[];var sel=document.getElementById('ai-model');sel.innerHTML='';models.forEach(function(m){var o=document.createElement('option');o.value=m.id||m.name;o.textContent=m.id||m.name;sel.appendChild(o);});var saved=localStorage.getItem('ai_model');if(saved)sel.value=saved;toast('获取到 '+models.length+' 个模型');}catch(e){toast('获取模型失败：'+e.message);}finally{this.textContent='拉取模型';this.disabled=false;}});
+document.getElementById('ai-test').addEventListener('click',async function(){saveAiConfig();var t=Date.now();this.textContent='测试中...';this.disabled=true;var statusEl=document.getElementById('ai-status');try{var result=await callAi('回复"ok"');statusEl.textContent='✅ 连接成功，延迟 '+(Date.now()-t)+'ms，返回：'+result.slice(0,50);}catch(e){statusEl.textContent='❌ 连接失败：'+e.message;}finally{this.textContent='🔌 测试连接';this.disabled=false;}});
+document.getElementById('ai-batch-fill').addEventListener('click',async function(){saveAiConfig();await aiBatchFill();});
+document.getElementById('cm-ai-fill').addEventListener('click',async function(){saveAiConfig();await aiFillCard();});
+// URL/名称变化时控制 AI 填写按钮显示
+function updateAiBtnVisibility(){var url=document.getElementById('cm-url').value.trim(),name=document.getElementById('cm-name').value.trim(),cfg=getAiConfig();document.getElementById('cm-ai-fill').style.display=(url&&name&&cfg.apiKey&&cfg.model)?'':'none';}
+document.getElementById('cm-url').addEventListener('input',updateAiBtnVisibility);
+document.getElementById('cm-name').addEventListener('input',updateAiBtnVisibility);
+// 打开设置时加载 AI 配置
+var _origSettingsOpen=document.getElementById('settings-btn').onclick;
+document.getElementById('settings-btn').addEventListener('click',function(){var cfg=getAiConfig();document.getElementById('ai-base-url').value=cfg.baseUrl;document.getElementById('ai-api-key').value=cfg.apiKey;if(cfg.model){var sel=document.getElementById('ai-model');var opt=document.createElement('option');opt.value=cfg.model;opt.textContent=cfg.model;sel.innerHTML='';sel.appendChild(opt);sel.value=cfg.model;}document.getElementById('ai-status').textContent='';});
 loadData();activeCat=cats[0]?cats[0].id:null;
 renderTabs();renderCards();tick();setInterval(tick,1000);initParticles();updateUserUI();
 if(token)pullCloud();

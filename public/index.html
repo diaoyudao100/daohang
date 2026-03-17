@@ -233,10 +233,25 @@ select.form-input option{background:var(--bg3);color:var(--t)}
   </div>
 </div>
 <div class="overlay" id="note-modal">
-  <div class="modal">
+  <div class="modal modal-wide" style="max-width:700px">
     <div class="modal-title">📝 便笺</div>
-    <textarea id="note-textarea" placeholder="记录你的想法..."></textarea>
-    <div class="modal-footer"><button class="btn btn-ghost" id="note-cancel">关闭</button><button class="btn btn-primary" id="note-save">保存</button></div>
+    <div style="display:flex;gap:12px;height:360px">
+      <div style="width:180px;flex-shrink:0;display:flex;flex-direction:column;gap:6px">
+        <button class="btn btn-ghost" id="note-add" style="width:100%">＋ 新建便笺</button>
+        <div id="note-list" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:4px"></div>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:8px">
+        <input class="form-input" id="note-title" placeholder="便笺标题" style="flex-shrink:0">
+        <textarea class="form-input" id="note-textarea" placeholder="记录你的想法..." style="flex:1;resize:none;line-height:1.6"></textarea>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <button class="btn btn-danger" id="note-del" style="display:none">🗑️ 删除</button>
+          <div style="display:flex;gap:8px;margin-left:auto">
+            <button class="btn btn-ghost" id="note-cancel">关闭</button>
+            <button class="btn btn-primary" id="note-save">保存</button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 <div class="overlay" id="avatar-modal">
@@ -376,11 +391,11 @@ const DEFAULT_CARDS=[
 {id:"d31",cat:"learn",icon:"\uD83D\uDD36",name:"Hacker News",desc:"\u6781\u5ba2",url:"https://news.ycombinator.com"},
 {id:"d32",cat:"learn",icon:"\u270D\uFE0F",name:"\u9610\u4e00\u5cf0\u535a\u5ba2",desc:"\u535a\u5ba2",url:"https://ruanyifeng.com"}
 ];
-let cats=[],cards=[],editMode=false,activeCat=null,dragSrc=null,currentEditCard=null;
+let cats=[],cards=[],notes=[],editMode=false,activeCat=null,dragSrc=null,currentEditCard=null;
 let loginMode='login',token=null,currentUser=null,isAdmin=false,syncTimer=null,ctxCard=null,cardStyle='detailed';
 const SYNC_DELAY=2000;
-function loadData(){var sc=localStorage.getItem('nav_cats'),sd=localStorage.getItem('nav_cards');cats=sc?JSON.parse(sc):JSON.parse(JSON.stringify(DEFAULT_CATS));cards=sd?JSON.parse(sd):JSON.parse(JSON.stringify(DEFAULT_CARDS));token=sessionStorage.getItem('nav_token');currentUser=sessionStorage.getItem('nav_user');isAdmin=sessionStorage.getItem('nav_is_admin')==='1';cardStyle=localStorage.getItem('nav_style')||'detailed';}
-function saveLocal(){localStorage.setItem('nav_cats',JSON.stringify(cats));localStorage.setItem('nav_cards',JSON.stringify(cards));}
+function loadData(){var sc=localStorage.getItem('nav_cats'),sd=localStorage.getItem('nav_cards'),sn=localStorage.getItem('nav_notes');cats=sc?JSON.parse(sc):JSON.parse(JSON.stringify(DEFAULT_CATS));cards=sd?JSON.parse(sd):JSON.parse(JSON.stringify(DEFAULT_CARDS));notes=sn?JSON.parse(sn):[];token=sessionStorage.getItem('nav_token');currentUser=sessionStorage.getItem('nav_user');isAdmin=sessionStorage.getItem('nav_is_admin')==='1';cardStyle=localStorage.getItem('nav_style')||'detailed';}
+function saveLocal(){localStorage.setItem('nav_cats',JSON.stringify(cats));localStorage.setItem('nav_cards',JSON.stringify(cards));localStorage.setItem('nav_notes',JSON.stringify(notes));}
 var WEEKS=['星期日','星期一','星期二','星期三','星期四','星期五','星期六'];
 var GREETS=[[0,5,'深夜好'],[5,9,'早上好'],[9,12,'上午好'],[12,14,'中午好'],[14,18,'下午好'],[18,24,'晚上好']];
 function getWeekNum(d){var s=new Date(d.getFullYear(),0,1);return Math.ceil(((d-s)/86400000+s.getDay()+1)/7);}
@@ -405,8 +420,8 @@ function openCatModal(){document.getElementById('catm-name').value='';document.g
 function doSearch(){var q=document.getElementById('q').value.trim();if(!q)return;if(q.startsWith('http://')||q.startsWith('https://')){window.open(q,'_blank');return;}var pill=document.querySelector('.epill.on');window.open((pill?pill.dataset.url:'https://www.google.com/search?q=')+encodeURIComponent(q),'_blank');}
 function setSyncStatus(msg){document.getElementById('sync-status').textContent=msg;}
 function schedulSync(){if(!token)return;setSyncStatus('待同步...');clearTimeout(syncTimer);syncTimer=setTimeout(pushCloud,SYNC_DELAY);}
-async function pullCloud(){if(!token||!currentUser)return;setSyncStatus('同步中...');try{var r=await fetch('/api/data?user='+encodeURIComponent(currentUser)),d=await r.json();if(d.ok&&d.data){if(d.data.cats)cats=d.data.cats;if(d.data.cards)cards=d.data.cards;activeCat=cats[0]?cats[0].id:null;saveLocal();renderTabs();renderCards();setSyncStatus('上次同步 '+(d.data.syncAt?new Date(d.data.syncAt).toLocaleTimeString():''));}else setSyncStatus('已登录');}catch(e){setSyncStatus('离线');}}
-async function pushCloud(){if(!token)return;setSyncStatus('同步中...');try{var r=await fetch('/api/data',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({cats:cats,cards:cards})});var d=await r.json();if(d.ok)setSyncStatus('✅ 已同步 '+(d.syncAt?new Date(d.syncAt).toLocaleTimeString():''));else setSyncStatus('❌ 同步失败');}catch(e){setSyncStatus('❌ 网络错误');}}
+async function pullCloud(){if(!token||!currentUser)return;setSyncStatus('同步中...');try{var r=await fetch('/api/data?user='+encodeURIComponent(currentUser)),d=await r.json();if(d.ok&&d.data){if(d.data.cats)cats=d.data.cats;if(d.data.cards)cards=d.data.cards;if(d.data.notes)notes=d.data.notes;activeCat=cats[0]?cats[0].id:null;saveLocal();renderTabs();renderCards();setSyncStatus('上次同步 '+(d.data.syncAt?new Date(d.data.syncAt).toLocaleTimeString():''));}else setSyncStatus('已登录');}catch(e){setSyncStatus('离线');}}
+async function pushCloud(){if(!token)return;setSyncStatus('同步中...');try{var r=await fetch('/api/data',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({cats:cats,cards:cards,notes:notes})});var d=await r.json();if(d.ok)setSyncStatus('✅ 已同步 '+(d.syncAt?new Date(d.syncAt).toLocaleTimeString():''));else setSyncStatus('❌ 同步失败');}catch(e){setSyncStatus('❌ 网络错误');}}
 function updateUserUI(){var btn=document.getElementById('user-btn');if(currentUser){btn.textContent='👤 '+currentUser+' ▾';setSyncStatus('已登录');document.getElementById('dd-invite').style.display=isAdmin?'':'none';}else{btn.textContent='🔑 登录';setSyncStatus('未登录');document.getElementById('dd-invite').style.display='none';}}
 function toast(msg,dur){var el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');setTimeout(function(){el.classList.remove('show');},dur||2200);}
 function importBookmarks(html){var parser=new DOMParser(),doc=parser.parseFromString(html,'text/html');var imported=[],catMap={},genericRoots=['Bookmarks Bar','书签栏','Other Bookmarks','其他书签'];function traverse(el,pathArr){Array.from(el.children).forEach(function(node){if(node.tagName==='DT'){var h3=node.querySelector('h3'),a=node.querySelector('a'),dl=node.querySelector('dl');if(h3&&dl)traverse(dl,pathArr.concat([h3.textContent.trim()]));else if(a){var url=a.getAttribute('href');if(!url||url.startsWith('chrome://')||url.startsWith('about:'))return;var folder=pathArr.filter(function(s){return genericRoots.indexOf(s)<0;}),catName=folder.length?folder.join(' / '):'导入书签';if(!catMap[catName]){var cid='bm_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);catMap[catName]=cid;cats.push({id:cid,name:catName,icon:'🔖'});}imported.push({id:'bm'+Date.now()+Math.random().toString(36).slice(2,5),cat:catMap[catName],icon:'🌐',name:a.textContent.trim()||url,desc:'',url:url});}}});}var rootDl=doc.querySelector('dl');if(rootDl)traverse(rootDl,[]);cards=cards.concat(imported);if(!activeCat&&cats.length)activeCat=cats[0].id;saveLocal();renderTabs();renderCards();document.getElementById('io-modal').classList.remove('show');toast('导入了 '+imported.length+' 个书签');}
@@ -429,8 +444,14 @@ document.getElementById('lm-cancel').addEventListener('click',function(){documen
 document.getElementById('login-modal').addEventListener('click',function(e){if(e.target===e.currentTarget)document.getElementById('login-modal').classList.remove('show');});
 document.getElementById('lm-submit').addEventListener('click',async function(){var user=document.getElementById('lm-user').value.trim(),pwd=document.getElementById('lm-pwd').value;if(!user||!pwd){document.getElementById('lm-hint').textContent='请填写用户名和密码';return;}var ep=loginMode==='login'?'/api/login':'/api/register';var body={username:user,password:pwd};if(loginMode==='register'){var inv=document.getElementById('lm-invite').value.trim().toUpperCase();if(!inv){document.getElementById('lm-hint').textContent='请填写邀请码';return;}body.invite=inv;}try{var r=await fetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});var d=await r.json();if(!d.ok){document.getElementById('lm-hint').textContent=d.error||'失败';return;}if(loginMode==='register'){document.getElementById('lm-hint').textContent='注册成功，请登录';loginMode='login';document.getElementById('login-title').textContent='登录账户';document.getElementById('lm-switch').textContent='去注册';document.getElementById('lm-submit').textContent='登录';document.getElementById('lm-invite-group').style.display='none';return;}token=d.token;currentUser=d.username;isAdmin=!!d.isAdmin;sessionStorage.setItem('nav_token',token);sessionStorage.setItem('nav_user',currentUser);sessionStorage.setItem('nav_is_admin',isAdmin?'1':'');document.getElementById('login-modal').classList.remove('show');updateUserUI();toast('登录成功 ✅');pullCloud();}catch(e){document.getElementById('lm-hint').textContent='网络错误';}});
 ['lm-user','lm-pwd'].forEach(function(id){document.getElementById(id).addEventListener('keydown',function(e){if(e.key==='Enter')document.getElementById('lm-submit').click();});});
-document.getElementById('note-btn').addEventListener('click',function(){document.getElementById('note-textarea').value=localStorage.getItem('nav_note')||'';document.getElementById('note-modal').classList.add('show');});
-document.getElementById('note-save').addEventListener('click',function(){localStorage.setItem('nav_note',document.getElementById('note-textarea').value);document.getElementById('note-modal').classList.remove('show');toast('便签已保存');});
+// 便笺相关
+var activeNoteId=null;
+function renderNoteList(){var list=document.getElementById('note-list');list.innerHTML='';notes.forEach(function(n){var item=document.createElement('div');item.style.cssText='padding:8px 10px;border-radius:var(--r3);cursor:pointer;border:1px solid '+(n.id===activeNoteId?'var(--a)':'var(--bd)')+';background:'+(n.id===activeNoteId?'rgba(124,106,255,0.1)':'transparent')+';transition:all .2s';item.innerHTML='<div style="font-size:13px;font-weight:500;color:var(--t);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(n.title||'无标题')+'</div><div style="font-size:11px;color:var(--t3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(n.content||'').slice(0,30)+'</div>';item.onclick=function(){activeNoteId=n.id;loadNoteToEditor();renderNoteList();};list.appendChild(item);});}
+function loadNoteToEditor(){var n=notes.find(function(x){return x.id===activeNoteId;});if(!n){document.getElementById('note-title').value='';document.getElementById('note-textarea').value='';document.getElementById('note-del').style.display='none';return;}document.getElementById('note-title').value=n.title||'';document.getElementById('note-textarea').value=n.content||'';document.getElementById('note-del').style.display='';}
+document.getElementById('note-btn').addEventListener('click',function(){if(!activeNoteId&&notes.length)activeNoteId=notes[0].id;renderNoteList();loadNoteToEditor();document.getElementById('note-modal').classList.add('show');});
+document.getElementById('note-add').addEventListener('click',function(){var n={id:'n'+Date.now(),title:'',content:'',updatedAt:new Date().toISOString()};notes.unshift(n);activeNoteId=n.id;renderNoteList();loadNoteToEditor();document.getElementById('note-title').focus();});
+document.getElementById('note-save').addEventListener('click',function(){var n=notes.find(function(x){return x.id===activeNoteId;});if(!n){toast('请先选择或新建便笺');return;}n.title=document.getElementById('note-title').value.trim();n.content=document.getElementById('note-textarea').value;n.updatedAt=new Date().toISOString();saveLocal();schedulSync();renderNoteList();toast('便笺已保存');});
+document.getElementById('note-del').addEventListener('click',function(){if(!activeNoteId||!confirm('确认删除此便笺？'))return;notes=notes.filter(function(x){return x.id!==activeNoteId;});activeNoteId=notes.length?notes[0].id:null;saveLocal();schedulSync();renderNoteList();loadNoteToEditor();toast('已删除');});
 document.getElementById('note-cancel').addEventListener('click',function(){document.getElementById('note-modal').classList.remove('show');});
 document.getElementById('note-modal').addEventListener('click',function(e){if(e.target===e.currentTarget)document.getElementById('note-modal').classList.remove('show');});
 document.getElementById('avatar-wrap').addEventListener('click',function(){document.getElementById('avm-url').value='';document.getElementById('avatar-modal').classList.add('show');});

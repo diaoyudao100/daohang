@@ -129,6 +129,7 @@ export default {
       const data = {
         cats: body.cats || [],
         cards: body.cards || [],
+        notes: body.notes || [],
         profile: body.profile || {},
         syncAt: new Date().toISOString(),
       };

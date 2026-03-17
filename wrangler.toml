@@ -1,0 +1,14 @@
+name = "daohang"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+[[kv_namespaces]]
+binding = "NAV_KV"
+id = "YOUR_KV_NAMESPACE_ID"
+
+# 部署步骤：
+# 1. 安装 wrangler: npm install -g wrangler
+# 2. 登录: wrangler login
+# 3. 创建 KV: wrangler kv:namespace create NAV_KV
+# 4. 将上面输出的 id 填入本文件 id 字段
+# 5. 部署: wrangler deploy

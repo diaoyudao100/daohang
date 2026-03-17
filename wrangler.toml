@@ -1,10 +1,11 @@
 name = "daohang"
 main = "worker.js"
 compatibility_date = "2024-01-01"
+assets = { directory = "./public" }
 
 [[kv_namespaces]]
 binding = "NAV_KV"
-id = "YOUR_KV_NAMESPACE_ID"
+id = "d2ad8d76b06d4fa88775b5e9317fd29b"
 
 # 部署步骤：
 # 1. 安装 wrangler: npm install -g wrangler

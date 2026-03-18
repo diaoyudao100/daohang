@@ -447,7 +447,7 @@ const DEFAULT_CARDS=[
 let cats=[],cards=[],notes=[],editMode=false,activeCat=null,dragSrc=null,currentEditCard=null;
 let loginMode='login',token=null,currentUser=null,isAdmin=false,syncTimer=null,ctxCard=null,cardStyle='detailed';
 const SYNC_DELAY=2000;
-function loadData(){var sc=localStorage.getItem('nav_cats'),sd=localStorage.getItem('nav_cards'),sn=localStorage.getItem('nav_notes');cats=sc?JSON.parse(sc):JSON.parse(JSON.stringify(DEFAULT_CATS));cards=sd?JSON.parse(sd):JSON.parse(JSON.stringify(DEFAULT_CARDS));notes=sn?JSON.parse(sn):[];token=localStorage.getItem('nav_token');currentUser=localStorage.getItem('nav_user');isAdmin=localStorage.getItem('nav_is_admin')==='1';cardStyle=localStorage.getItem('nav_style')||'detailed';}
+function loadData(){var sc=localStorage.getItem('nav_cats'),sd=localStorage.getItem('nav_cards'),sn=localStorage.getItem('nav_notes');cats=sc?JSON.parse(sc):JSON.parse(JSON.stringify(DEFAULT_CATS));cards=sd?JSON.parse(sd):JSON.parse(JSON.stringify(DEFAULT_CARDS));notes=sn?JSON.parse(sn):[];token=localStorage.getItem('nav_token');currentUser=localStorage.getItem('nav_user');isAdmin=localStorage.getItem('nav_is_admin')==='1';cardStyle=localStorage.getItem('nav_style')||'simple';}
 function saveLocal(){localStorage.setItem('nav_cats',JSON.stringify(cats));localStorage.setItem('nav_cards',JSON.stringify(cards));localStorage.setItem('nav_notes',JSON.stringify(notes));}
 var WEEKS=['星期日','星期一','星期二','星期三','星期四','星期五','星期六'];
 var GREETS=[[0,5,'深夜好'],[5,9,'早上好'],[9,12,'上午好'],[12,14,'中午好'],[14,18,'下午好'],[18,24,'晚上好']];

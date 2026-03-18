@@ -258,7 +258,8 @@ select.form-input option{background:var(--bg3);color:var(--t)}
   <div class="modal">
     <div class="modal-title" id="card-modal-title">添加书签</div>
     <div class="form-group"><label class="form-label">URL</label><input class="form-input" id="cm-url" placeholder="https://..."><div class="ai-hint" id="cm-hint"></div></div>
-    <div class="form-row"><div class="form-group"><label class="form-label">名称</label><input class="form-input" id="cm-name" placeholder="网站名称"></div><div class="form-group" style="flex:0 0 90px"><label class="form-label">图标</label><input class="form-input" id="cm-icon" placeholder="🌐"></div></div>
+    <div class="form-row"><div class="form-group"><label class="form-label">名称</label><input class="form-input" id="cm-name" placeholder="网站名称"></div><div class="form-group" style="flex:0 0 auto"><label class="form-label">图标</label><div style="display:flex;gap:6px"><input class="form-input" id="cm-icon" placeholder="🌐" style="width:60px;text-align:center"><button type="button" class="btn btn-ghost" id="cm-emoji-btn" style="white-space:nowrap;padding:9px 10px">选择</button></div></div></div>
+    <div id="cm-emoji-picker" style="display:none;margin-bottom:10px"><div style="display:flex;gap:6px;flex-wrap:wrap" id="cm-emoji-grid"></div></div>
     <div class="form-group"><label class="form-label">描述</label><div style="position:relative"><textarea class="form-input" id="cm-desc" placeholder="简短描述" rows="2" style="resize:none;line-height:1.5;width:100%;padding-right:36px"></textarea><button id="cm-ai-fill" title="AI填写" style="display:none;position:absolute;right:8px;bottom:8px;background:var(--a);border:none;border-radius:6px;color:#fff;font-size:12px;padding:3px 7px;cursor:pointer;opacity:0.85;line-height:1">✨</button></div></div>
     <div class="form-group"><label class="form-label">分类（可多选）</label><div id="cm-cat-tags" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px"></div></div>
     <div class="modal-footer"><button class="btn btn-danger" id="cm-del" style="margin-right:auto;display:none">删除</button><button class="btn btn-ghost" id="cm-cancel">取消</button><button class="btn btn-primary" id="cm-save">保存</button></div>
@@ -267,8 +268,21 @@ select.form-input option{background:var(--bg3);color:var(--t)}
 <div class="overlay" id="cat-modal">
   <div class="modal">
     <div class="modal-title">添加分类</div>
-    <div class="form-group"><label class="form-label">分类名称</label><input class="form-input" id="catm-name" placeholder="分类名称"></div>
-    <div class="form-group"><label class="form-label">图标 (Emoji)</label><input class="form-input" id="catm-icon" placeholder="📁" style="font-size:20px"></div>
+    <div class="form-group">
+      <label class="form-label">分类名称</label>
+      <input class="form-input" id="catm-name" placeholder="分类名称">
+      <div class="ai-hint" id="catm-hint"></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">图标</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input class="form-input" id="catm-icon" placeholder="📁" style="font-size:20px;width:70px;text-align:center">
+        <button type="button" class="btn btn-ghost" id="catm-emoji-btn" style="white-space:nowrap">选择图标</button>
+      </div>
+      <div id="catm-emoji-picker" style="display:none;margin-top:8px;display:none">
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px" id="catm-emoji-grid"></div>
+      </div>
+    </div>
     <div class="modal-footer"><button class="btn btn-ghost" id="catm-cancel">取消</button><button class="btn btn-primary" id="catm-save">保存</button></div>
   </div>
 </div>
@@ -484,8 +498,11 @@ function showCtxMenu(e,card){ctxCard=card;var m=document.getElementById('ctx-men
 function hideCtxMenu(){document.getElementById('ctx-menu').classList.remove('show');document.getElementById('ctx-move-sub').style.display='none';ctxCard=null;}
 function aiGuess(url){try{var host=new URL(url.startsWith('http')?url:'https://'+url).hostname.replace(/^www\./,'');for(var k in AI_RULES){if(host===k||host.endsWith('.'+k))return AI_RULES[k];}var parts=host.split('.'),name=parts.length>=2?parts[parts.length-2]:host;return{name:name.charAt(0).toUpperCase()+name.slice(1),icon:'🌐',desc:''};}catch(e){return null;}}
 function openCardModal(card){currentEditCard=card;document.getElementById('card-modal-title').textContent=card?'编辑书签':'添加书签';document.getElementById('cm-url').value=card?card.url:'';document.getElementById('cm-name').value=card?card.name:'';document.getElementById('cm-icon').value=card?(card.icon||''):'';document.getElementById('cm-desc').value=card?(card.desc||''):'';document.getElementById('cm-hint').textContent='';document.getElementById('cm-del').style.display=card?'':'none';var selectedCats=card?(Array.isArray(card.cats)?card.cats:(card.cat?[card.cat]:[])):(activeCat?[activeCat]:[]);var tagsEl=document.getElementById('cm-cat-tags');tagsEl.innerHTML='';cats.forEach(function(c){var btn=document.createElement('button');btn.type='button';btn.className='cat-tag-btn'+(selectedCats.includes(c.id)?' on':'');btn.textContent=c.icon+' '+c.name;btn.dataset.id=c.id;btn.onclick=function(){this.classList.toggle('on');};tagsEl.appendChild(btn);});document.getElementById('card-modal').classList.add('show');setTimeout(function(){document.getElementById('cm-url').focus();},50);}
-function closeCardModal(){document.getElementById('card-modal').classList.remove('show');}
-function openCatModal(){document.getElementById('catm-name').value='';document.getElementById('catm-icon').value='';document.getElementById('cat-modal').classList.add('show');setTimeout(function(){document.getElementById('catm-name').focus();},50);}
+function closeCardModal(){document.getElementById('card-modal').classList.remove('show');document.getElementById('cm-emoji-picker').style.display='none';}
+var CAT_EMOJI_LIST=['📁','🔖','⭐','🌟','🔥','💡','🎯','🚀','🛠️','💻','📱','🌐','🎨','🎮','🎵','📚','📰','🛒','💰','🏠','✈️','🍔','💪','🧠','🔬','📊','📈','🔐','👥','📧','📅','🗂️','🗒️','📌','🔗','⚙️','🧩','🌈','🌙','☀️','❤️','🎁','🏆','🎬','📷','🎤','🧪','🌿','🐱','🐶','🦊','🐼','🌸','🍀','🌊','⚡','🔮','💎','🪄','🎪','🏋️','🚗','🛸'];var CAT_ICON_RULES=[['工具|常用|实用|效率','🛠️'],['开发|代码|程序|编程|dev','💻'],['设计|UI|视觉|创意','🎨'],['AI|人工智能|机器学习','🤖'],['娱乐|游戏|休闲|玩','🎮'],['音乐|歌曲|播放','🎵'],['视频|影视|电影|电视','🎬'],['学习|教育|阅读|书|知识','📚'],['新闻|资讯|媒体|信息','📰'],['购物|电商|商城|买','🛒'],['金融|理财|投资|股票|钱','💰'],['社交|社区|论坛|交流','👥'],['图片|图库|图标|素材','🖼️'],['搜索|导航|入口','🔍'],['工作|办公|效率','💼'],['安全|隐私|加密','🔐'],['云|存储|备份','☁️'],['邮件|邮箱','📧'],['日历|时间|计划','📅'],['技术|科技','⚡'],['生活|日常','🏠'],['旅行|出行','✈️'],['美食|餐饮','🍔'],['健康|运动|健身','💪'],['科学|研究','🔬'],['数据|统计|分析','📊']];function guessEmojiForCat(name){if(!name)return'📁';var n=name.toLowerCase();for(var i=0;i<CAT_ICON_RULES.length;i++){var keys=CAT_ICON_RULES[i][0].split('|');for(var j=0;j<keys.length;j++){if(n.includes(keys[j]))return CAT_ICON_RULES[i][1];}}return'📁';}
+function openCatModal(){document.getElementById('catm-name').value='';document.getElementById('catm-icon').value='';document.getElementById('catm-hint').textContent='';document.getElementById('catm-emoji-picker').style.display='none';renderCatEmojiGrid('');document.getElementById('cat-modal').classList.add('show');setTimeout(function(){document.getElementById('catm-name').focus();},50);}
+function renderCatEmojiGrid(filter){var grid=document.getElementById('catm-emoji-grid');grid.innerHTML='';var list=filter?CAT_EMOJI_LIST.filter(function(e){return e.includes(filter);}):CAT_EMOJI_LIST;list.forEach(function(em){var btn=document.createElement('button');btn.type='button';btn.style.cssText='font-size:22px;background:transparent;border:1px solid var(--bd2);border-radius:var(--r3);padding:4px 8px;cursor:pointer;transition:all .15s';btn.textContent=em;btn.onclick=function(){document.getElementById('catm-icon').value=em;};grid.appendChild(btn);});}
+function renderCardEmojiGrid(){var grid=document.getElementById('cm-emoji-grid');if(!grid)return;grid.innerHTML='';CAT_EMOJI_LIST.forEach(function(em){var btn=document.createElement('button');btn.type='button';btn.style.cssText='font-size:22px;background:transparent;border:1px solid var(--bd2);border-radius:var(--r3);padding:4px 8px;cursor:pointer;transition:all .15s';btn.textContent=em;btn.onclick=function(){document.getElementById('cm-icon').value=em;document.getElementById('cm-emoji-picker').style.display='none';};grid.appendChild(btn);});}
 function doSearch(){var q=document.getElementById('q').value.trim();if(!q)return;if(q.startsWith('http://')||q.startsWith('https://')){window.open(q,'_blank');return;}var pill=document.querySelector('.epill.on');window.open((pill?pill.dataset.url:'https://www.google.com/search?q=')+encodeURIComponent(q),'_blank');}
 function setSyncStatus(msg){document.getElementById('sync-status').textContent=msg;}
 function schedulSync(){if(!token)return;setSyncStatus('待同步...');clearTimeout(syncTimer);syncTimer=setTimeout(pushCloud,SYNC_DELAY);}
@@ -505,8 +522,24 @@ document.getElementById('cm-url').addEventListener('input',function(){var url=th
 document.getElementById('cm-save').addEventListener('click',function(){var url=document.getElementById('cm-url').value.trim(),name=document.getElementById('cm-name').value.trim();if(!url||!name){toast('请填写URL和名称');return;}var selectedCats=Array.from(document.querySelectorAll('#cm-cat-tags .cat-tag-btn.on')).map(function(b){return b.dataset.id;});if(!selectedCats.length){toast('请至少选择一个分类');return;}var icon=document.getElementById('cm-icon').value.trim()||'🌐',desc=document.getElementById('cm-desc').value.trim();if(currentEditCard){currentEditCard.url=url;currentEditCard.name=name;currentEditCard.icon=icon;currentEditCard.desc=desc;currentEditCard.cats=selectedCats;currentEditCard.cat=selectedCats[0];}else cards.push({id:'c'+Date.now(),cats:selectedCats,cat:selectedCats[0],icon:icon,name:name,desc:desc,url:url});saveLocal();schedulSync();closeCardModal();renderCards();toast('已保存');});
 document.getElementById('cm-del').addEventListener('click',function(){if(!currentEditCard)return;if(!confirm('确认删除？'))return;cards=cards.filter(function(c){return c.id!==currentEditCard.id;});saveLocal();schedulSync();closeCardModal();renderCards();toast('已删除');});
 document.getElementById('cm-cancel').addEventListener('click',closeCardModal);
+document.getElementById('cm-emoji-btn').addEventListener('click',function(){
+  var picker=document.getElementById('cm-emoji-picker');
+  if(picker.style.display==='none'){renderCardEmojiGrid();picker.style.display='block';}else{picker.style.display='none';}
+});
 document.getElementById('card-modal').addEventListener('click',function(e){if(e.target===e.currentTarget)closeCardModal();});
 document.getElementById('catm-save').addEventListener('click',function(){var name=document.getElementById('catm-name').value.trim(),icon=document.getElementById('catm-icon').value.trim()||'📁';if(!name){toast('请填写分类名称');return;}var id='cat_'+Date.now();cats.push({id:id,name:name,icon:icon});activeCat=id;saveLocal();schedulSync();document.getElementById('cat-modal').classList.remove('show');renderTabs();renderCards();toast('分类已添加');});
+document.getElementById('catm-name').addEventListener('input',function(){
+  var guess=guessEmojiForCat(this.value.trim());
+  if(guess!=='📁'||!document.getElementById('catm-icon').value){
+    document.getElementById('catm-icon').value=guess;
+    document.getElementById('catm-hint').textContent=guess!=='📁'?'✨ 已智能匹配图标':'';
+  }
+  renderCatEmojiGrid('');
+});
+document.getElementById('catm-emoji-btn').addEventListener('click',function(){
+  var picker=document.getElementById('catm-emoji-picker');
+  picker.style.display=picker.style.display==='none'?'block':'none';
+});
 document.getElementById('catm-cancel').addEventListener('click',function(){document.getElementById('cat-modal').classList.remove('show');});
 document.getElementById('cat-modal').addEventListener('click',function(e){if(e.target===e.currentTarget)document.getElementById('cat-modal').classList.remove('show');});
 document.getElementById('lm-switch').addEventListener('click',function(){loginMode=loginMode==='login'?'register':'login';document.getElementById('login-title').textContent=loginMode==='login'?'登录账户':'注册账户';document.getElementById('lm-switch').textContent=loginMode==='login'?'去注册':'去登录';document.getElementById('lm-submit').textContent=loginMode==='login'?'登录':'注册';document.getElementById('lm-hint').textContent='';document.getElementById('lm-invite-group').style.display=loginMode==='register'?'':'none';document.getElementById('lm-invite').value='';});

@@ -164,12 +164,34 @@ select.form-input option{background:var(--bg3);color:var(--t)}
 #infobar::-webkit-scrollbar{display:none}
 .ib-item{padding:3px 7px;font-size:11px;white-space:nowrap;flex-shrink:0}
 }
+.md-preview{flex:1;overflow-y:auto;padding:10px 12px;background:rgba(255,255,255,0.03);border:1px solid var(--bd2);border-radius:var(--r3);font-size:14px;line-height:1.7;color:var(--t)}
+.md-preview h1,.md-preview h2,.md-preview h3{color:var(--t);margin:.6em 0 .3em;font-weight:600}
+.md-preview h1{font-size:1.3em}.md-preview h2{font-size:1.15em}.md-preview h3{font-size:1em}
+.md-preview p{margin:.4em 0}
+.md-preview code{background:rgba(255,255,255,0.1);padding:1px 5px;border-radius:4px;font-family:monospace;font-size:13px}
+.md-preview pre{background:rgba(0,0,0,0.3);padding:10px;border-radius:var(--r3);overflow-x:auto;margin:.5em 0}
+.md-preview pre code{background:none;padding:0}
+.md-preview ul,.md-preview ol{padding-left:1.4em;margin:.3em 0}
+.md-preview li{margin:.15em 0}
+.md-preview blockquote{border-left:3px solid var(--a);padding:.2em .8em;margin:.4em 0;color:var(--t2)}
+.md-preview a{color:var(--a);text-decoration:none}
+.md-preview hr{border:none;border-top:1px solid var(--bd);margin:.6em 0}
+.md-preview strong{color:var(--t);font-weight:600}
+.note-tab-btns{display:flex;gap:6px;margin-bottom:6px}
+.note-tab-btn{padding:4px 12px;border-radius:20px;border:1px solid var(--bd2);background:transparent;color:var(--t2);font-size:12px;cursor:pointer;font-family:inherit;transition:all .2s}
+.note-tab-btn.on{background:var(--a);color:#fff;border-color:var(--a)}
+.card-search-hl{background:rgba(124,106,255,0.25);border-radius:2px}
 </style>
 </head>
 <body>
 <canvas id="bg"></canvas>
 <div id="topbar">
   <div id="sync-status">未登录</div>
+  <div id="card-search-wrap" style="display:none;position:relative">
+    <input id="card-search-input" class="form-input" placeholder="搜索书签..." style="width:180px;padding:5px 30px 5px 10px;font-size:13px;height:32px">
+    <span id="card-search-clear" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--t3);font-size:14px">✕</span>
+  </div>
+  <button class="tb-btn" id="card-search-btn">🔍<span class="tb-txt"> 搜索</span></button>
   <button class="tb-btn" id="note-btn">📝<span class="tb-txt"> 便笺</span></button>
   <button class="tb-btn" id="io-btn">📂<span class="tb-txt"> 导入导出</span></button>
   <button class="tb-btn" id="settings-btn">⚙️<span class="tb-txt"> 设置</span></button>
@@ -267,7 +289,9 @@ select.form-input option{background:var(--bg3);color:var(--t)}
       </div>
       <div style="flex:1;display:flex;flex-direction:column;gap:8px">
         <input class="form-input" id="note-title" placeholder="便笺标题" style="flex-shrink:0">
-        <textarea class="form-input" id="note-textarea" placeholder="记录你的想法..." style="flex:1;resize:none;line-height:1.6"></textarea>
+        <div class="note-tab-btns"><button class="note-tab-btn on" id="note-tab-edit">编辑</button><button class="note-tab-btn" id="note-tab-preview">预览</button></div>
+        <textarea class="form-input" id="note-textarea" placeholder="支持 Markdown 语法..." style="flex:1;resize:none;line-height:1.6"></textarea>
+        <div class="md-preview" id="note-preview" style="display:none"></div>
         <div style="display:flex;justify-content:space-between;align-items:center">
           <button class="btn btn-danger" id="note-del" style="display:none">🗑️ 删除</button>
           <div style="display:flex;gap:8px;margin-left:auto">
@@ -419,7 +443,7 @@ const DEFAULT_CARDS=[
 let cats=[],cards=[],notes=[],editMode=false,activeCat=null,dragSrc=null,currentEditCard=null;
 let loginMode='login',token=null,currentUser=null,isAdmin=false,syncTimer=null,ctxCard=null,cardStyle='detailed';
 const SYNC_DELAY=2000;
-function loadData(){var sc=localStorage.getItem('nav_cats'),sd=localStorage.getItem('nav_cards'),sn=localStorage.getItem('nav_notes');cats=sc?JSON.parse(sc):JSON.parse(JSON.stringify(DEFAULT_CATS));cards=sd?JSON.parse(sd):JSON.parse(JSON.stringify(DEFAULT_CARDS));notes=sn?JSON.parse(sn):[];token=sessionStorage.getItem('nav_token');currentUser=sessionStorage.getItem('nav_user');isAdmin=sessionStorage.getItem('nav_is_admin')==='1';cardStyle=localStorage.getItem('nav_style')||'detailed';}
+function loadData(){var sc=localStorage.getItem('nav_cats'),sd=localStorage.getItem('nav_cards'),sn=localStorage.getItem('nav_notes');cats=sc?JSON.parse(sc):JSON.parse(JSON.stringify(DEFAULT_CATS));cards=sd?JSON.parse(sd):JSON.parse(JSON.stringify(DEFAULT_CARDS));notes=sn?JSON.parse(sn):[];token=localStorage.getItem('nav_token');currentUser=localStorage.getItem('nav_user');isAdmin=localStorage.getItem('nav_is_admin')==='1';cardStyle=localStorage.getItem('nav_style')||'detailed';}
 function saveLocal(){localStorage.setItem('nav_cats',JSON.stringify(cats));localStorage.setItem('nav_cards',JSON.stringify(cards));localStorage.setItem('nav_notes',JSON.stringify(notes));}
 var WEEKS=['星期日','星期一','星期二','星期三','星期四','星期五','星期六'];
 var GREETS=[[0,5,'深夜好'],[5,9,'早上好'],[9,12,'上午好'],[12,14,'中午好'],[14,18,'下午好'],[18,24,'晚上好']];
@@ -467,7 +491,7 @@ document.getElementById('cat-modal').addEventListener('click',function(e){if(e.t
 document.getElementById('lm-switch').addEventListener('click',function(){loginMode=loginMode==='login'?'register':'login';document.getElementById('login-title').textContent=loginMode==='login'?'登录账户':'注册账户';document.getElementById('lm-switch').textContent=loginMode==='login'?'去注册':'去登录';document.getElementById('lm-submit').textContent=loginMode==='login'?'登录':'注册';document.getElementById('lm-hint').textContent='';document.getElementById('lm-invite-group').style.display=loginMode==='register'?'':'none';document.getElementById('lm-invite').value='';});
 document.getElementById('lm-cancel').addEventListener('click',function(){document.getElementById('login-modal').classList.remove('show');});
 document.getElementById('login-modal').addEventListener('click',function(e){if(e.target===e.currentTarget)document.getElementById('login-modal').classList.remove('show');});
-document.getElementById('lm-submit').addEventListener('click',async function(){var user=document.getElementById('lm-user').value.trim(),pwd=document.getElementById('lm-pwd').value;if(!user||!pwd){document.getElementById('lm-hint').textContent='请填写用户名和密码';return;}var ep=loginMode==='login'?'/api/login':'/api/register';var body={username:user,password:pwd};if(loginMode==='register'){var inv=document.getElementById('lm-invite').value.trim().toUpperCase();if(!inv){document.getElementById('lm-hint').textContent='请填写邀请码';return;}body.invite=inv;}try{var r=await fetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});var d=await r.json();if(!d.ok){document.getElementById('lm-hint').textContent=d.error||'失败';return;}if(loginMode==='register'){document.getElementById('lm-hint').textContent='注册成功，请登录';loginMode='login';document.getElementById('login-title').textContent='登录账户';document.getElementById('lm-switch').textContent='去注册';document.getElementById('lm-submit').textContent='登录';document.getElementById('lm-invite-group').style.display='none';return;}token=d.token;currentUser=d.username;isAdmin=!!d.isAdmin;sessionStorage.setItem('nav_token',token);sessionStorage.setItem('nav_user',currentUser);sessionStorage.setItem('nav_is_admin',isAdmin?'1':'');document.getElementById('login-modal').classList.remove('show');updateUserUI();toast('登录成功 ✅');pullCloud();}catch(e){document.getElementById('lm-hint').textContent='网络错误';}});
+document.getElementById('lm-submit').addEventListener('click',async function(){var user=document.getElementById('lm-user').value.trim(),pwd=document.getElementById('lm-pwd').value;if(!user||!pwd){document.getElementById('lm-hint').textContent='请填写用户名和密码';return;}var ep=loginMode==='login'?'/api/login':'/api/register';var body={username:user,password:pwd};if(loginMode==='register'){var inv=document.getElementById('lm-invite').value.trim().toUpperCase();if(!inv){document.getElementById('lm-hint').textContent='请填写邀请码';return;}body.invite=inv;}try{var r=await fetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});var d=await r.json();if(!d.ok){document.getElementById('lm-hint').textContent=d.error||'失败';return;}if(loginMode==='register'){document.getElementById('lm-hint').textContent='注册成功，请登录';loginMode='login';document.getElementById('login-title').textContent='登录账户';document.getElementById('lm-switch').textContent='去注册';document.getElementById('lm-submit').textContent='登录';document.getElementById('lm-invite-group').style.display='none';return;}token=d.token;currentUser=d.username;isAdmin=!!d.isAdmin;localStorage.setItem('nav_token',token);localStorage.setItem('nav_user',currentUser);localStorage.setItem('nav_is_admin',isAdmin?'1':'');document.getElementById('login-modal').classList.remove('show');updateUserUI();toast('登录成功 ✅');pullCloud();}catch(e){document.getElementById('lm-hint').textContent='网络错误';}});
 ['lm-user','lm-pwd'].forEach(function(id){document.getElementById(id).addEventListener('keydown',function(e){if(e.key==='Enter')document.getElementById('lm-submit').click();});});
 // 便笺相关
 var activeNoteId=null;
@@ -513,7 +537,7 @@ document.querySelectorAll('.epill').forEach(function(btn){btn.addEventListener('
 document.getElementById('search-btn').addEventListener('click',doSearch);
 document.getElementById('q').addEventListener('keydown',function(e){if(e.key==='Enter')doSearch();});
 document.getElementById('user-btn').addEventListener('click',function(){if(!currentUser){loginMode='login';document.getElementById('login-title').textContent='登录账户';document.getElementById('lm-switch').textContent='去注册';document.getElementById('lm-submit').textContent='登录';document.getElementById('lm-hint').textContent='';document.getElementById('lm-user').value='';document.getElementById('lm-pwd').value='';document.getElementById('login-modal').classList.add('show');}else document.getElementById('user-dropdown').classList.toggle('show');});
-document.getElementById('dd-logout').addEventListener('click',function(){token=null;currentUser=null;isAdmin=false;sessionStorage.removeItem('nav_token');sessionStorage.removeItem('nav_user');sessionStorage.removeItem('nav_is_admin');document.getElementById('user-dropdown').classList.remove('show');updateUserUI();toast('已退出登录');});
+document.getElementById('dd-logout').addEventListener('click',function(){token=null;currentUser=null;isAdmin=false;localStorage.removeItem('nav_token');localStorage.removeItem('nav_user');localStorage.removeItem('nav_is_admin');document.getElementById('user-dropdown').classList.remove('show');updateUserUI();toast('已退出登录');});
 document.getElementById('dd-invite').addEventListener('click',async function(){document.getElementById('user-dropdown').classList.remove('show');try{var r=await fetch('/api/invite',{method:'POST',headers:{'Authorization':'Bearer '+token}});var d=await r.json();if(d.ok){prompt('邀请码（7天有效，一次性使用）：',d.code);}else{toast('生成失败：'+(d.error||'未知错误'));}}catch(e){toast('网络错误');}});
 document.getElementById('dd-switch').addEventListener('click',function(){document.getElementById('user-dropdown').classList.remove('show');loginMode='login';document.getElementById('login-title').textContent='切换账户';document.getElementById('lm-switch').textContent='去注册';document.getElementById('lm-submit').textContent='登录';document.getElementById('lm-hint').textContent='';document.getElementById('lm-user').value='';document.getElementById('lm-pwd').value='';document.getElementById('login-modal').classList.add('show');});
 document.addEventListener('click',function(e){var uw=document.getElementById('user-wrap');if(uw&&!uw.contains(e.target))document.getElementById('user-dropdown').classList.remove('show');});
@@ -632,6 +656,85 @@ if(token)pullCloud();
     }
   });
 })();
+
+// 便笺 Markdown 渲染
+function simpleMarkdown(md){
+  var escaped=md.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return escaped
+    .replace(/```([\s\S]*?)```/g,'<pre><code>$1</code></pre>')
+    .replace(/`([^`\n]+)`/g,'<code>$1</code>')
+    .replace(/^### (.+)$/gm,'<h3>$1</h3>')
+    .replace(/^## (.+)$/gm,'<h2>$1</h2>')
+    .replace(/^# (.+)$/gm,'<h1>$1</h1>')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g,'<em>$1</em>')
+    .replace(/^> (.+)$/gm,'<blockquote>$1</blockquote>')
+    .replace(/^---$/gm,'<hr>')
+    .replace(/^[*-] (.+)$/gm,'<li>$1</li>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>')
+    .replace(/\n\n/g,'</p><p>')
+    .replace(/\n/g,'<br>')
+    .replace(/^(<h[123]>|<blockquote>|<hr>|<ul>|<li>|<pre>)/,'$1')
+    .replace(/^(?!<)/gm,'<p>')
+    .replace(/(?<!>)$/gm,'</p>')
+    .replace(/<p><\/p>/g,'');
+}
+document.getElementById('note-tab-edit').addEventListener('click',function(){
+  this.classList.add('on');document.getElementById('note-tab-preview').classList.remove('on');
+  document.getElementById('note-textarea').style.display='';
+  document.getElementById('note-preview').style.display='none';
+});
+document.getElementById('note-tab-preview').addEventListener('click',function(){
+  this.classList.add('on');document.getElementById('note-tab-edit').classList.remove('on');
+  document.getElementById('note-textarea').style.display='none';
+  var preview=document.getElementById('note-preview');
+  preview.style.display='';
+  preview.innerHTML=simpleMarkdown(document.getElementById('note-textarea').value||'*暂无内容*');
+});
+
+// 书签搜索
+var cardSearchActive=false,cardSearchQuery='';
+document.getElementById('card-search-btn').addEventListener('click',function(){
+  cardSearchActive=!cardSearchActive;
+  var wrap=document.getElementById('card-search-wrap');
+  wrap.style.display=cardSearchActive?'flex':'';
+  if(cardSearchActive){document.getElementById('card-search-input').focus();}
+  else{cardSearchQuery='';document.getElementById('card-search-input').value='';renderCards();}
+  this.classList.toggle('active',cardSearchActive);
+});
+document.getElementById('card-search-input').addEventListener('input',function(){
+  cardSearchQuery=this.value.trim().toLowerCase();
+  if(cardSearchQuery)renderSearchResults();else renderCards();
+});
+document.getElementById('card-search-clear').addEventListener('click',function(){
+  document.getElementById('card-search-input').value='';
+  cardSearchQuery='';
+  renderCards();
+});
+function renderSearchResults(){
+  var area=document.getElementById('cards-area');
+  area.innerHTML='';
+  var hdr=document.createElement('div');hdr.className='section-header';
+  var title=document.createElement('span');title.className='section-title';
+  title.textContent='🔍 搜索结果';hdr.appendChild(title);area.appendChild(hdr);
+  var q=cardSearchQuery;
+  var matched=cards.filter(function(c){
+    return c.name.toLowerCase().includes(q)||(c.desc&&c.desc.toLowerCase().includes(q))||(c.url&&c.url.toLowerCase().includes(q));
+  });
+  if(!matched.length){
+    var empty=document.createElement('div');empty.style.cssText='color:var(--t3);font-size:14px;padding:30px 0;text-align:center';
+    empty.textContent='没有找到匹配的书签';area.appendChild(empty);return;
+  }
+  var grid=document.createElement('div');grid.className='cards-grid'+(cardStyle==='simple'?' simple':'');
+  var re=new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi');
+  matched.forEach(function(card){
+    var el=makeCard(card);
+    var nameEl=el.querySelector('.card-name');
+    if(nameEl)nameEl.innerHTML=nameEl.textContent.replace(re,'<span class="card-search-hl">$1</span>');
+    grid.appendChild(el);
+  });
+  area.appendChild(grid);
+}
 });
 
 </script>

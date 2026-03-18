@@ -154,8 +154,9 @@ select.form-input option{background:var(--bg3);color:var(--t)}
 #cards-area{padding:12px 12px 32px}
 .cards-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
 .cards-grid.simple{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
-.modal{padding:18px 16px;border-radius:16px 16px 0 0;max-height:85vh;position:fixed;bottom:0;left:0;right:0;width:100%;max-width:100%}
-.overlay{padding:0;align-items:flex-end}
+.modal{padding:18px 16px;border-radius:16px;max-height:88vh;width:calc(100% - 24px);max-width:100%;position:relative;bottom:auto;left:auto;right:auto}
+.overlay{padding:12px;align-items:center}
+.card{min-height:60px}
 .form-row{flex-direction:column;gap:0}
 #tabs{padding:0 12px}
 .tab{padding:10px 12px;font-size:12px}
@@ -560,6 +561,77 @@ document.getElementById('settings-btn').addEventListener('click',function(){var 
 loadData();activeCat=cats[0]?cats[0].id:null;
 renderTabs();renderCards();tick();setInterval(tick,1000);initParticles();updateUserUI();
 if(token)pullCloud();
+
+// 手机端：模态框下滑关闭
+(function(){
+  var isMobile=function(){return window.innerWidth<=640;};
+  document.querySelectorAll('.overlay').forEach(function(overlay){
+    var modal=overlay.querySelector('.modal');
+    if(!modal)return;
+    var startY=0,startX=0,isDragging=false;
+    modal.addEventListener('touchstart',function(e){
+      if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.target.tagName==='SELECT')return;
+      startY=e.touches[0].clientY;startX=e.touches[0].clientX;isDragging=true;
+    },{passive:true});
+    modal.addEventListener('touchmove',function(e){
+      if(!isDragging||!isMobile())return;
+      var dy=e.touches[0].clientY-startY,dx=e.touches[0].clientX-startX;
+      if(dy>0&&Math.abs(dy)>Math.abs(dx)){modal.style.transform='translateY('+dy+'px)';modal.style.transition='none';}
+    },{passive:true});
+    modal.addEventListener('touchend',function(e){
+      if(!isDragging||!isMobile()){modal.style.transform='';modal.style.transition='';isDragging=false;return;}
+      var dy=e.changedTouches[0].clientY-startY;
+      if(dy>80){modal.style.transition='transform .25s ease';modal.style.transform='translateY(100%)';setTimeout(function(){overlay.classList.remove('show');modal.style.transform='';modal.style.transition='';},220);}
+      else{modal.style.transition='transform .2s ease';modal.style.transform='';}
+      isDragging=false;
+    },{passive:true});
+  });
+})();
+
+// 手机端：触摸拖拽卡片排序
+(function(){
+  var touchSrc=null,touchClone=null;
+  document.getElementById('cards-area').addEventListener('touchstart',function(e){
+    if(!editMode)return;
+    var card=e.target.closest('.card[draggable]');
+    if(!card)return;
+    touchSrc=card.dataset.id;
+    card.classList.add('dragging');
+    touchClone=card.cloneNode(true);
+    touchClone.style.cssText='position:fixed;z-index:9999;opacity:.7;pointer-events:none;width:'+card.offsetWidth+'px;border:2px solid var(--a);border-radius:14px;';
+    document.body.appendChild(touchClone);
+  },{passive:true});
+  document.addEventListener('touchmove',function(e){
+    if(!touchSrc||!touchClone)return;
+    var t=e.touches[0];
+    touchClone.style.left=(t.clientX-touchClone.offsetWidth/2)+'px';
+    touchClone.style.top=(t.clientY-touchClone.offsetHeight/2)+'px';
+    var el=document.elementFromPoint(t.clientX,t.clientY);
+    var target=el&&el.closest('.card[draggable]');
+    document.querySelectorAll('.card').forEach(function(c){c.classList.remove('drag-over');});
+    if(target&&target.dataset.id!==touchSrc)target.classList.add('drag-over');
+  },{passive:true});
+  document.addEventListener('touchend',function(e){
+    if(!touchSrc)return;
+    var t=e.changedTouches[0];
+    var el=document.elementFromPoint(t.clientX,t.clientY);
+    var target=el&&el.closest('.card[draggable]');
+    if(target&&target.dataset.id!==touchSrc)handleDrop(target.dataset.id);
+    document.querySelectorAll('.card').forEach(function(c){c.classList.remove('dragging');c.classList.remove('drag-over');});
+    if(touchClone){touchClone.remove();touchClone=null;}
+    touchSrc=null;
+  },{passive:true});
+})();
+
+// 手机端：输入框获焦时滚动到可见区域防止被键盘遮挡
+(function(){
+  if(!/Mobi|Android|iPhone/i.test(navigator.userAgent))return;
+  document.addEventListener('focusin',function(e){
+    if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'){
+      setTimeout(function(){e.target.scrollIntoView({block:'center',behavior:'smooth'});},300);
+    }
+  });
+})();
 });
 
 </script>

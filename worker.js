@@ -161,6 +161,16 @@ export default {
       return json({ ok: true, code });
     }
 
+    // POST /api/refresh — 刷新 session token（延长30天）
+    if (request.method === 'POST' && path === '/api/refresh') {
+      const token = getBearerToken(request);
+      if (!token) return err('未登录', 401);
+      const username = await kv.get(`sess:${token}`);
+      if (!username) return err('token无效', 401);
+      await kv.put(`sess:${token}`, username, { expirationTtl: 2592000 });
+      return json({ ok: true });
+    }
+
     // GET /api/users — 检查是否有已注册用户
     if (request.method === 'GET' && path === '/api/users') {
       const listRaw = await env.NAV_KV.get('nav_users');

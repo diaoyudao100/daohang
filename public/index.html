@@ -139,19 +139,40 @@ select.form-input option{background:var(--bg3);color:var(--t)}
 .style-btns{display:flex;gap:8px;margin-top:8px}
 .style-btn{flex:1;padding:10px;border-radius:var(--r3);border:1px solid var(--bd2);background:transparent;color:var(--t2);font-size:13px;cursor:pointer;font-family:inherit;transition:all .2s;text-align:center}
 .style-btn.active{border-color:var(--a);color:var(--a);background:rgba(124,106,255,0.08)}
+@media(max-width:640px){
+#topbar{padding:6px 10px;gap:5px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+#topbar::-webkit-scrollbar{display:none}
+.tb-btn{padding:7px 9px;min-width:34px;justify-content:center}
+.tb-txt{display:none}
+#sync-status{font-size:11px;padding:4px 7px;white-space:nowrap;flex-shrink:0}
+#user-dropdown{right:0}
+.wrap{padding:0 12px}
+#hero{padding:14px 0 6px}
+#clock{font-size:clamp(2rem,10vw,3rem)}
+#search-wrap{padding:0 4px}
+#search-btn{padding:8px 12px;font-size:13px}
+#cards-area{padding:12px 12px 32px}
+.cards-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+.cards-grid.simple{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
+.modal{padding:18px 16px;border-radius:16px 16px 0 0;max-height:85vh;position:fixed;bottom:0;left:0;right:0;width:100%;max-width:100%}
+.overlay{padding:0;align-items:flex-end}
+.form-row{flex-direction:column;gap:0}
+#tabs{padding:0 12px}
+.tab{padding:10px 12px;font-size:12px}
+}
 </style>
 </head>
 <body>
 <canvas id="bg"></canvas>
 <div id="topbar">
   <div id="sync-status">未登录</div>
-  <button class="tb-btn" id="note-btn">📝 便笺</button>
-  <button class="tb-btn" id="io-btn">📂 导入导出</button>
-  <button class="tb-btn" id="settings-btn">⚙️ 设置</button>
-  <button class="tb-btn" id="edit-btn">✏️ 编辑</button>
-  <button class="tb-btn" id="theme-btn">🌙 主题</button>
+  <button class="tb-btn" id="note-btn">📝<span class="tb-txt"> 便笺</span></button>
+  <button class="tb-btn" id="io-btn">📂<span class="tb-txt"> 导入导出</span></button>
+  <button class="tb-btn" id="settings-btn">⚙️<span class="tb-txt"> 设置</span></button>
+  <button class="tb-btn" id="edit-btn">✏️<span class="tb-txt"> 编辑</span></button>
+  <button class="tb-btn" id="theme-btn">🌙<span class="tb-txt"> 主题</span></button>
   <div id="user-wrap">
-    <button class="tb-btn" id="user-btn">🔑 登录</button>
+    <button class="tb-btn" id="user-btn">🔑<span class="tb-txt"> 登录</span></button>
     <div id="user-dropdown">
       <button class="dd-item" id="dd-invite" style="display:none">🎟 生成邀请码</button>
       <button class="dd-item" id="dd-switch">🔄 切换账户</button>
@@ -402,7 +423,7 @@ function getWeekNum(d){var s=new Date(d.getFullYear(),0,1);return Math.ceil(((d-
 function tick(){var n=new Date();var hh=String(n.getHours()).padStart(2,'0'),mm=String(n.getMinutes()).padStart(2,'0'),ss=String(n.getSeconds()).padStart(2,'0');document.getElementById('clock').textContent=hh+':'+mm+':'+ss;document.getElementById('date-row').textContent=n.getFullYear()+'年'+(n.getMonth()+1)+'月'+n.getDate()+'日  '+WEEKS[n.getDay()];var g=GREETS.find(function(x){return n.getHours()>=x[0]&&n.getHours()<x[1];});document.getElementById('greet').textContent=g?g[2]+' 👋':'';document.getElementById('ib-date').textContent=(n.getMonth()+1)+'月'+n.getDate()+'日';document.getElementById('ib-time').textContent=hh+':'+mm+':'+ss;document.getElementById('ib-week').textContent=WEEKS[n.getDay()];document.getElementById('ib-weeknum').textContent='第'+getWeekNum(n)+'周';}
 function initParticles(){var canvas=document.getElementById('bg'),ctx=canvas.getContext('2d');var W,H,pts;function resize(){W=canvas.width=innerWidth;H=canvas.height=innerHeight;}function mkPts(){pts=Array.from({length:50},function(){return{x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.4,vy:(Math.random()-.5)*.4,r:Math.random()*2+1};});}function draw(){if(localStorage.getItem('nav_bg_url')){requestAnimationFrame(draw);return;}ctx.clearRect(0,0,W,H);var light=document.documentElement.dataset.theme==='light';var pc=light?'rgba(100,80,220,':'rgba(124,106,255,';pts.forEach(function(p){p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>W)p.vx*=-1;if(p.y<0||p.y>H)p.vy*=-1;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=pc+'0.6)';ctx.fill();});for(var i=0;i<pts.length;i++)for(var j=i+1;j<pts.length;j++){var dx=pts[i].x-pts[j].x,dy=pts[i].y-pts[j].y,d=Math.sqrt(dx*dx+dy*dy);if(d<120){ctx.beginPath();ctx.moveTo(pts[i].x,pts[i].y);ctx.lineTo(pts[j].x,pts[j].y);ctx.strokeStyle=pc+(1-d/120)*0.15+')';ctx.stroke();}}requestAnimationFrame(draw);}resize();mkPts();draw();window.addEventListener('resize',function(){resize();mkPts();});}
 function applyBgUrl(url){if(url){document.body.style.backgroundImage='url('+url+')';document.body.style.backgroundSize='cover';document.body.style.backgroundPosition='center';document.body.style.backgroundAttachment='fixed';}else{document.body.style.backgroundImage='';}}
-function applyTheme(t){document.documentElement.dataset.theme=t;localStorage.setItem('nav_theme',t);document.getElementById('theme-btn').textContent=t==='light'?'🌞 主题':'🌙 主题';}
+function applyTheme(t){document.documentElement.dataset.theme=t;localStorage.setItem('nav_theme',t);document.getElementById('theme-btn').innerHTML=t==='light'?'🌞<span class="tb-txt"> 主题</span>':'🌙<span class="tb-txt"> 主题</span>';}
 function toggleTheme(){applyTheme(document.documentElement.dataset.theme==='light'?'dark':'light');}
 function applyCardStyle(s){cardStyle=s;localStorage.setItem('nav_style',s);document.getElementById('style-detailed').classList.toggle('active',s==='detailed');document.getElementById('style-simple').classList.toggle('active',s==='simple');renderCards();}
 function applyAccent(color){document.documentElement.style.setProperty('--a',color);localStorage.setItem('nav_accent',color);document.querySelectorAll('.swatch').forEach(function(s){s.classList.toggle('active',s.dataset.color===color);});}
@@ -422,7 +443,7 @@ function setSyncStatus(msg){document.getElementById('sync-status').textContent=m
 function schedulSync(){if(!token)return;setSyncStatus('待同步...');clearTimeout(syncTimer);syncTimer=setTimeout(pushCloud,SYNC_DELAY);}
 async function pullCloud(){if(!token)return;setSyncStatus('同步中...');try{var r=await fetch('/api/data',{headers:{'Authorization':'Bearer '+token}}),d=await r.json();if(d.ok&&d.data){if(d.data.cats)cats=d.data.cats;if(d.data.cards)cards=d.data.cards;if(d.data.notes)notes=d.data.notes;activeCat=cats[0]?cats[0].id:null;saveLocal();renderTabs();renderCards();setSyncStatus('上次同步 '+(d.data.syncAt?new Date(d.data.syncAt).toLocaleTimeString():''));}else setSyncStatus('已登录');}catch(e){setSyncStatus('离线');}}
 async function pushCloud(){if(!token)return;setSyncStatus('同步中...');try{var r=await fetch('/api/data',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({cats:cats,cards:cards,notes:notes})});var d=await r.json();if(d.ok)setSyncStatus('✅ 已同步 '+(d.syncAt?new Date(d.syncAt).toLocaleTimeString():''));else setSyncStatus('❌ 同步失败');}catch(e){setSyncStatus('❌ 网络错误');}}
-function updateUserUI(){var btn=document.getElementById('user-btn');if(currentUser){btn.textContent='👤 '+currentUser+' ▾';setSyncStatus('已登录');document.getElementById('dd-invite').style.display=isAdmin?'':'none';}else{btn.textContent='🔑 登录';setSyncStatus('未登录');document.getElementById('dd-invite').style.display='none';}}
+function updateUserUI(){var btn=document.getElementById('user-btn');if(currentUser){btn.innerHTML='👤 '+currentUser+'<span class="tb-txt"> ▾</span>';setSyncStatus('已登录');document.getElementById('dd-invite').style.display=isAdmin?'':'none';}else{btn.innerHTML='🔑<span class="tb-txt"> 登录</span>';setSyncStatus('未登录');document.getElementById('dd-invite').style.display='none';}}
 function toast(msg,dur){var el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');setTimeout(function(){el.classList.remove('show');},dur||2200);}
 function importBookmarks(html){var parser=new DOMParser(),doc=parser.parseFromString(html,'text/html');var imported=[],catMap={},genericRoots=['Bookmarks Bar','书签栏','Other Bookmarks','其他书签'];function traverse(el,pathArr){Array.from(el.children).forEach(function(node){if(node.tagName==='DT'){var h3=node.querySelector('h3'),a=node.querySelector('a'),dl=node.querySelector('dl');if(h3&&dl)traverse(dl,pathArr.concat([h3.textContent.trim()]));else if(a){var url=a.getAttribute('href');if(!url||url.startsWith('chrome://')||url.startsWith('about:'))return;var folder=pathArr.filter(function(s){return genericRoots.indexOf(s)<0;}),catName=folder.length?folder.join(' / '):'导入书签';if(!catMap[catName]){var cid='bm_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);catMap[catName]=cid;cats.push({id:cid,name:catName,icon:'🔖'});}imported.push({id:'bm'+Date.now()+Math.random().toString(36).slice(2,5),cat:catMap[catName],icon:'🌐',name:a.textContent.trim()||url,desc:'',url:url});}}});}var rootDl=doc.querySelector('dl');if(rootDl)traverse(rootDl,[]);cards=cards.concat(imported);if(!activeCat&&cats.length)activeCat=cats[0].id;saveLocal();renderTabs();renderCards();document.getElementById('io-modal').classList.remove('show');toast('导入了 '+imported.length+' 个书签');}
 function renderCatManager(){var list=document.getElementById('cat-manager-list');list.innerHTML='';cats.forEach(function(cat){var item=document.createElement('div');item.className='cat-list-item';var iconSpan=document.createElement('span');iconSpan.className='cat-list-icon';iconSpan.textContent=cat.icon;var nameSpan=document.createElement('span');nameSpan.className='cat-list-name';nameSpan.textContent=cat.name;var actions=document.createElement('div');actions.className='cat-list-actions';var editBtn=document.createElement('button');editBtn.className='cat-list-btn';editBtn.textContent='编辑';editBtn.onclick=function(){editCat(cat.id,this);};var delBtn=document.createElement('button');delBtn.className='cat-list-btn danger';delBtn.textContent='删除';delBtn.onclick=function(e){deleteCat(cat.id,e);};actions.appendChild(editBtn);actions.appendChild(delBtn);item.appendChild(iconSpan);item.appendChild(nameSpan);item.appendChild(actions);list.appendChild(item);});}
@@ -477,13 +498,13 @@ document.getElementById('ctx-open').addEventListener('click',function(){if(ctxCa
 document.getElementById('ctx-copy').addEventListener('click',function(){if(ctxCard)navigator.clipboard.writeText(ctxCard.url).then(function(){toast('已复制链接');});hideCtxMenu();});
 document.getElementById('ctx-dup').addEventListener('click',function(){if(ctxCard){var nc=Object.assign({},ctxCard,{id:'c'+Date.now(),name:ctxCard.name+' (副本)',pinned:false});cards.push(nc);saveLocal();schedulSync();renderCards();toast('已复制一份');}hideCtxMenu();});
 document.getElementById('ctx-pin').addEventListener('click',function(){if(ctxCard){ctxCard.pinned=!ctxCard.pinned;saveLocal();schedulSync();renderCards();toast(ctxCard.pinned?'已置顶':'已取消置顶');}hideCtxMenu();});
-document.getElementById('ctx-edit').addEventListener('click',function(){if(ctxCard){editMode=true;document.body.classList.add('edit-mode');document.getElementById('edit-btn').classList.add('active');document.getElementById('edit-btn').textContent='✅ 完成';document.getElementById('nav-title').contentEditable='true';renderTabs();renderCards();openCardModal(ctxCard);}hideCtxMenu();});
+document.getElementById('ctx-edit').addEventListener('click',function(){if(ctxCard){editMode=true;document.body.classList.add('edit-mode');document.getElementById('edit-btn').classList.add('active');document.getElementById('edit-btn').innerHTML='✅<span class="tb-txt"> 完成</span>';document.getElementById('nav-title').contentEditable='true';renderTabs();renderCards();openCardModal(ctxCard);}hideCtxMenu();});
 document.getElementById('ctx-del').addEventListener('click',function(){if(ctxCard&&confirm('确认删除？')){cards=cards.filter(function(c){return c.id!==ctxCard.id;});saveLocal();schedulSync();renderCards();toast('已删除');}hideCtxMenu();});
 document.getElementById('ctx-move').addEventListener('click',function(){if(!ctxCard)return;var sub=document.getElementById('ctx-move-sub');sub.innerHTML='';cats.filter(function(c){return c.id!==ctxCard.cat;}).forEach(function(cat){var btn=document.createElement('button');btn.className='ctx-item';btn.textContent=cat.icon+' '+cat.name;btn.onclick=function(){ctxCard.cat=cat.id;saveLocal();schedulSync();renderCards();toast('已移至 '+cat.name);hideCtxMenu();};sub.appendChild(btn);});var rect=document.getElementById('ctx-menu').getBoundingClientRect();sub.style.left=Math.min(rect.right+4,window.innerWidth-160)+'px';sub.style.top=this.getBoundingClientRect().top+'px';sub.style.display='block';});
 document.addEventListener('click',function(e){if(!document.getElementById('ctx-menu').contains(e.target)&&!document.getElementById('ctx-move-sub').contains(e.target))hideCtxMenu();});
 document.addEventListener('keydown',function(e){if(e.key==='Escape')hideCtxMenu();});
 document.getElementById('theme-btn').addEventListener('click',toggleTheme);
-document.getElementById('edit-btn').addEventListener('click',function(){editMode=!editMode;document.body.classList.toggle('edit-mode',editMode);this.classList.toggle('active',editMode);this.textContent=editMode?'✅ 完成':'✏️ 编辑';var titleEl=document.getElementById('nav-title');titleEl.contentEditable=editMode?'true':'false';if(!editMode)localStorage.setItem('nav_title',titleEl.textContent.trim()||'我的导航');renderTabs();renderCards();});
+document.getElementById('edit-btn').addEventListener('click',function(){editMode=!editMode;document.body.classList.toggle('edit-mode',editMode);this.classList.toggle('active',editMode);this.innerHTML=editMode?'✅<span class="tb-txt"> 完成</span>':'✏️<span class="tb-txt"> 编辑</span>';var titleEl=document.getElementById('nav-title');titleEl.contentEditable=editMode?'true':'false';if(!editMode)localStorage.setItem('nav_title',titleEl.textContent.trim()||'我的导航');renderTabs();renderCards();});
 document.querySelectorAll('.epill').forEach(function(btn){btn.addEventListener('click',function(){document.querySelectorAll('.epill').forEach(function(b){b.classList.remove('on');});this.classList.add('on');});});
 document.getElementById('search-btn').addEventListener('click',doSearch);
 document.getElementById('q').addEventListener('keydown',function(e){if(e.key==='Enter')doSearch();});
